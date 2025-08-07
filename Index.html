@@ -1,0 +1,969 @@
+
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Skyltinventering Botkyrka</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    #map { height: 100vh; width: 100%; }
+.custom-popup {
+  position: absolute;
+  width: 300px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transform: translate(10px, -90%); /* ← här är ändringen */
+  z-index: 1000;
+  overflow: hidden;
+}
+
+    .popup-banner {
+      background-color: #d82027;
+      color: white;
+      font-weight: bold;
+      font-size: 22px;
+      padding: 10px;
+    }
+    .popup-content { padding: 12px; font-size: 14px; }
+    .popup-content a { color: #007BFF; text-decoration: none; }
+    .popup-content a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+let map;
+let popupOverlay;
+
+const locations = [
+  {
+    position: { lat: 59.244634, lng: 17.824403 },
+    adress: `Hallunda Centrum`,
+    namn: `Leo, Jesse, Albin`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Helt sprucken, solskadat, väldigt sliten, behöver bytas ut på en gång`,
+    bild: `https://drive.google.com/open?id=1eFEXcSR_I6xrE4-0GBR32kyoZK-zpg7R`
+  },
+  {
+    position: { lat: 59.245313, lng: 17.805514 },
+    adress: `Kärsby idrottsplats`,
+    namn: `Jesse, Leo, Albin`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Sliten, klottrade, behöver bytas ut ASAP`,
+    bild: `https://drive.google.com/open?id=1YKq_h1USSuQauQj2f_Jf3_PYvC_wWxX5, https://drive.google.com/open?id=1ybGt4XoSx_l7Jep0k_Yam3K9hpISsiQw`
+  },
+  {
+    position: { lat: 59.234519, lng: 17.852428 },
+    adress: `Kvarnhagen dagliga verksamhet `,
+    namn: `Elina,Inez och Maria `,
+    område: `Alby`,
+    kommentar: `Gott skick, textbalkarna är bra `,
+    bild: `https://drive.google.com/open?id=1G_KaEfCmhPaTzIJrAae4OaYUKnhFbOHn`
+  },
+  {
+    position: { lat: 59.201074, lng: 17.833053 },
+    adress: `Munkhättevägen 31`,
+    namn: `Elina inez och maria`,
+    område: `Tumba`,
+    kommentar: `Klistermärken och klotter`,
+    bild: `https://drive.google.com/open?id=1MaZoV9evoeYv61AS0vaiyTLMhx6kGEt_`
+  },
+  {
+    position: { lat: 59.202986, lng: 17.829536 },
+    adress: `Nära örtugsvägen, tunaskolan, Sven Tumbas park`,
+    namn: `Elina inez och maria`,
+    område: `Tumba`,
+    kommentar: `Sprucken glasruta och klotter på baksidan`,
+    bild: `https://drive.google.com/open?id=1olBhPK3r_z7B4Lossj-tjBLWbQFnfzAn, https://drive.google.com/open?id=1fPwthBLud2QGQAqDIUTLI4b6sUNz3U-l`
+  },
+  {
+    position: { lat: 59.237507, lng: 17.853016 },
+    adress: `Alby IP`,
+    namn: `Jesse, Leo, Albin`,
+    område: `Alby`,
+    kommentar: `Fint skick, lite smutsig`,
+    bild: `https://drive.google.com/open?id=1m-aALovdBM9IlyFBnDWN9daL9zFz6gut`
+  },
+  {
+    position: { lat: 59.237505, lng: 17.854003 },
+    adress: `Alby IP`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Alby`,
+    kommentar: `Gott skick, inget fel`,
+    bild: `https://drive.google.com/open?id=1qYYWJwsha7pY--O5gydg6Xzhvkkrr3pF`
+  },
+  {
+    position: { lat: 59.237476, lng: 17.852798 },
+    adress: `Alby IP`,
+    namn: `Jesse, Leo, Albin`,
+    område: `Alby`,
+    kommentar: `Dåligt skick, solskadad, smutsig`,
+    bild: `https://drive.google.com/open?id=1phany-ylDfbDwi46p0ECFTR_fpVx43ur`
+  },
+  {
+    position: { lat: 59.237505, lng: 17.854003 },
+    adress: `Alby IP`,
+    namn: `Albin, Jesse, Leo`,
+    område: `Alby`,
+    kommentar: `Lite sprucken och en påtejpad skylt som täcker för`,
+    bild: `https://drive.google.com/open?id=1dkCFo7QjXhrgol1Y4HKDaQR3vmUOOW6p, https://drive.google.com/open?id=1cvrgCfYJc9ergHCXTHrkvyrS_NY7w6b8`
+  },
+  {
+    position: { lat: 59.237774, lng: 17.853078 },
+    adress: `Alby IP`,
+    namn: `Leo, Jesse, Albin`,
+    område: `Alby`,
+    kommentar: `Jättefint skick`,
+    bild: `https://drive.google.com/open?id=13LGZM1R1cBo9ALxAxGp95ctGJneOq6SW`
+  },
+  {
+    position: { lat: 59.238521, lng: 17.854131 },
+    adress: `Alby IP`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Alby`,
+    kommentar: `Bra skick, lite smutsig, behöver rengöras`,
+    bild: `https://drive.google.com/open?id=1MAA0UkchZrBx5RBuIisduj4VqlxvgMAI, https://drive.google.com/open?id=1G9I05vjPyFr9j3RDx-STt5Doz_OEYG0L`
+  },
+  {
+    position: { lat: 59.238214, lng: 17.854025 },
+    adress: `Alby IP`,
+    namn: `Albin, Leo, Jesse`,
+    område: `Alby`,
+    kommentar: `Okej skick, lite sprucken och sliten baksida samt mossa på framsidan`,
+    bild: `https://drive.google.com/open?id=1mI28dEFP2R37xe0mtM-oKuXcQh3z5A2X, https://drive.google.com/open?id=1qcAEF0lGe0zpiBkOH8bA6PeBVHAUbNob`
+  },
+  {
+    position: { lat: 59.201567, lng: 17.838083 },
+    adress: `Nära utbildningsvägen 3 mellan xcenter och tumbagymnasium `,
+    namn: `Elina inez och maria`,
+    område: `Tumba`,
+    kommentar: `Klistermärken och klotter`,
+    bild: `https://drive.google.com/open?id=1K_BNa24AxVIEOi5kH4D0963AruqrEnRL, https://drive.google.com/open?id=14OeTo2e73JJ9eC5NpKqE-UT0x-GumBaV`
+  },
+  {
+    position: { lat: 59.237925, lng: 17.846041 },
+    adress: `Alby Bibliotek`,
+    namn: `Leo, Jesse, Albin`,
+    område: `Alby`,
+    kommentar: `Mycket gott skick`,
+    bild: `https://drive.google.com/open?id=1ixbtLh8Sw8E1VH325VxyXikhvP7i5jxO`
+  },
+  {
+    position: { lat: 59.235072, lng: 17.846957 },
+    adress: `Kvarnhagsskolan`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Alby`,
+    kommentar: `Solskadad`,
+    bild: `https://drive.google.com/open?id=1qFKbu91jecb2uN0PN4okzgMJ3HoUXLOu`
+  },
+  {
+    position: { lat: 59.197185, lng: 17.805963 },
+    adress: `Segersjövägen 24`,
+    namn: `Elina Inez Maria`,
+    område: `Tumba`,
+    kommentar: `Bra skick, helt ren`,
+    bild: `https://drive.google.com/open?id=1O-nyY81KLXCok4qFYoYaXcttU2HvhX_b`
+  },
+  {
+    position: { lat: 59.237075, lng: 17.84468 },
+    adress: `Förskolan ugglan`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Alby`,
+    kommentar: `Bra skick, små skador på skyltten`,
+    bild: `https://drive.google.com/open?id=1EqeN2vrDt47VAPBFW8Ag9Dbo8TVxSreq`
+  },
+  {
+    position: { lat: 59.23666, lng: 17.858088 },
+    adress: `Tranans förskola`,
+    namn: `Leo, Jesse, Albin`,
+    område: `Alby`,
+    kommentar: `Mycket bra skick`,
+    bild: `https://drive.google.com/open?id=1SXpqESBXM4lUoZEcRA0WT7-Hnk0U5KTE`
+  },
+  {
+    position: { lat: 59.236956, lng: 17.858168 },
+    adress: `Förskolan tranan`,
+    namn: `Jesse, Leo, Albin`,
+    område: `Alby`,
+    kommentar: `Fint och bra skick`,
+    bild: `https://drive.google.com/open?id=1rHF7jLnLuTqIsq8GlPlvLL66F4HLtb53`
+  },
+  {
+    position: { lat: 59.183253, lng: 17.809033 },
+    adress: `Bröängens idrottsplats`,
+    namn: `Elina Inez Maria`,
+    område: `Tumba`,
+    kommentar: `Den är i ganska bra skick. Det finns bucklor och ett random kistermärke. Annars bra.`,
+    bild: `https://drive.google.com/open?id=1lH96h62ZoCouZI0BRDW-3pmdGFlX0-24`
+  },
+  {
+    position: { lat: 59.237156, lng: 17.854898 },
+    adress: `Förskolan Måsen (vid Alby IP)`,
+    namn: `Leo, Jesse, Albin`,
+    område: `Alby`,
+    kommentar: `Väldigt bra skick`,
+    bild: `https://drive.google.com/open?id=1GgIvax7W9_v7IV4lpsY3wexWyC1TvS32`
+  },
+  {
+    position: { lat: 59.234564, lng: 17.852723 },
+    adress: `Kvarnhagen Daglig Verksamhet`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Alby`,
+    kommentar: `Mycket bra skick`,
+    bild: `https://drive.google.com/open?id=12jOUFwNqMdpyKn97tNCcOlbbk6XE8O8Y`
+  },
+  {
+    position: { lat: 59.234579, lng: 17.852574 },
+    adress: `Kvarnhagdm Daglig verksamhet `,
+    namn: `Jesse, Leo, Albin`,
+    område: `Alby`,
+    kommentar: `Fint skick, inga skador för nu läget`,
+    bild: `https://drive.google.com/open?id=1B0GxtOYVxsn3UsK5LcUQfTGU93U3Nag_`
+  },
+  {
+    position: { lat: 59.234579, lng: 17.852574 },
+    adress: `Kvarnhagen daglig verksamhet `,
+    namn: `Jesse, Leo, Albin`,
+    område: `Alby`,
+    kommentar: `Fint skick, inga skador`,
+    bild: `https://drive.google.com/open?id=1qQncUlb9iAN7mIAMcoA0oZ0mVXkNYkWB`
+  },
+  {
+    position: { lat: 59.245707, lng: 17.862679 },
+    adress: `Fittja sporthall`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Fittja`,
+    kommentar: `Bra skick, inga konstigheter `,
+    bild: `https://drive.google.com/open?id=1efOXGVCvF3MWuBpcUP-BsCrUB90WtJ9R`
+  },
+  {
+    position: { lat: 59.245446, lng: 17.8628 },
+    adress: `Fittja IP`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Fittja`,
+    kommentar: `Bra skick, inga konsitgheter`,
+    bild: `https://drive.google.com/open?id=1MBUEug0AWmOqNF7_MZUL84pAWZ2dMBOi`
+  },
+  {
+    position: { lat: 59.245152, lng: 17.863409 },
+    adress: `Fittja Bollplan`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Fittja`,
+    kommentar: `Små klotter på skylten, lite smutsig`,
+    bild: `https://drive.google.com/open?id=1dgJg_ABbyBhfEmf_lF7SRiIR_1pZO91T, https://drive.google.com/open?id=1w9LtX3XRUslRj6QXT6xKRH9NkH8jlT-0`
+  },
+  {
+    position: { lat: 59.246757, lng: 17.868291 },
+    adress: `Fittja Äng Utegym`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Fittja`,
+    kommentar: `Relativ fint skick förutom klotter på en stor del av skylten`,
+    bild: `https://drive.google.com/open?id=1NZ5hLttpXqxAXD_svsMX0Y1hhY7UQsO3`
+  },
+  {
+    position: { lat: 59.248878, lng: 17.842243 },
+    adress: `Botkyrka Rackethall`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Mycket bra skick`,
+    bild: `https://drive.google.com/open?id=1Vpvgt0eXU7Bgx3KJl0qpSMOs46cekaEX`
+  },
+  {
+    position: { lat: 59.220739, lng: 17.91417 },
+    adress: `Trädgårdskolan`,
+    namn: `Elina inez maria`,
+    område: `Tullinge`,
+    kommentar: `Skylten är k bra skick men skylten under har ingen färg och man kan inte se vad som står`,
+    bild: `https://drive.google.com/open?id=1HX4acw0GCSC-kAZV7opBfAG8uJywJjns`
+  },
+  {
+    position: { lat: 59.249301, lng: 17.83702 },
+    adress: `Brunna`,
+    namn: `Jesse,Albin,leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick`,
+    bild: `https://drive.google.com/open?id=1SL3JWuI-TqhZsIbiErDoYF71DDr-lk2F`
+  },
+  {
+    position: { lat: 59.220739, lng: 17.91417 },
+    adress: `Trädgårdsstadsskolan`,
+    namn: `Elina inez maria`,
+    område: `Tullinge`,
+    kommentar: `En del av skylten har gått av, det är ett laminerat papper bara. `,
+    bild: `https://drive.google.com/open?id=1lBo-09KGAOYSSrHg0YJNdlWcWkhmyBF6`
+  },
+  {
+    position: { lat: 59.244899, lng: 17.836258 },
+    adress: `Brunna`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Klistermärken på skylten, behöver tas bort. Små skador och små repor på skylten.`,
+    bild: `https://drive.google.com/open?id=1iUBouSGc6xVHOmn_zfMlMlvNaS5pPLgn`
+  },
+  {
+    position: { lat: 59.244923, lng: 17.83542 },
+    adress: `Brunna IP`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Mycket bra skick (det är fågelskit på ena sidan ej spricka)`,
+    bild: `https://drive.google.com/open?id=1IPcc3XLGt0id9nBHQsoUXQb7QI8-5ns0, https://drive.google.com/open?id=1DPbxAgulAfNhlD1CZBPK6b7DDRa9I9Dg`
+  },
+  {
+    position: { lat: 59.244978, lng: 17.83628 },
+    adress: `Brunna idrottplats`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Smutsig, behöver rengöras.`,
+    bild: `https://drive.google.com/open?id=1lBn-tCWqhaPlWsG-yXsh8QBZhAD_NEYe, https://drive.google.com/open?id=1b7y55BFQzYevkpnMKa4m25gLN7To3L9z`
+  },
+  {
+    position: { lat: 59.244757, lng: 17.835924 },
+    adress: `Brunna idrottsplats`,
+    namn: `Yasin Leo jessie Albin`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Ser bra ut, lite fågelbajs på både sidorna `,
+    bild: `https://drive.google.com/open?id=1QAsjqbErmcz34ysTN6KrQyy1QiYZkkLx`
+  },
+  {
+    position: { lat: 59.246142, lng: 17.836164 },
+    adress: `Brunna`,
+    namn: `Jesse, Leo, Albin`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Smutsig`,
+    bild: `https://drive.google.com/open?id=1gEZfgUthH1iYoK3u3mINJ_DhAlxP8aw1`
+  },
+  {
+    position: { lat: 59.246387, lng: 17.836116 },
+    adress: `Brunna IP`,
+    namn: `Leo, Albin, Jessd`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick men lite smutsig`,
+    bild: `https://drive.google.com/open?id=1CxdyjjmbWyByVuXff6hRqP3C8P5yJiuU`
+  },
+  {
+    position: { lat: 59.246876, lng: 17.836577 },
+    adress: `Brunna`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Solskadad, jätte sliten, små klotter på skylten. Behöver bytas om ASAP`,
+    bild: `https://drive.google.com/open?id=1-0LFmm-RxGXjYBzy3dzl_80gaNGGjQv7`
+  },
+  {
+    position: { lat: 59.246937, lng: 17.838656 },
+    adress: `Brunna IP`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick förutom lite klotter`,
+    bild: `https://drive.google.com/open?id=1IzhUJBerAp4EGKnB4mfr7Pw4axy3xzT8`
+  },
+  {
+    position: { lat: 59.246851, lng: 17.838649 },
+    adress: `Brunna`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick på skylten`,
+    bild: `https://drive.google.com/open?id=1p_QsEGnvEZXG_rdSudTN4WYGuQYV5oYl`
+  },
+  {
+    position: { lat: 59.216212, lng: 17.901066 },
+    adress: `Förskolan fröhuset `,
+    namn: `Elina inez maria`,
+    område: `Tullinge`,
+    kommentar: `En skylt är gammal och färgen har flagnat bort`,
+    bild: `https://drive.google.com/open?id=1Etma4QEBkAM2QYEP4Qn4eut0cJfcrlMd, https://drive.google.com/open?id=1vITrJEyy3-aX5WgEczIhdQDw4MTmINrF`
+  },
+  {
+    position: { lat: 59.244658, lng: 17.823828 },
+    adress: `Hallunda Centrum`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick förutom två klistermärken och gammalt klister`,
+    bild: `https://drive.google.com/open?id=1QdClNDg07vcn39eLLd1SmuiC00GcepCo`
+  },
+  {
+    position: { lat: 59.244686, lng: 17.824148 },
+    adress: `nan`,
+    namn: `Jesse, Albin, allunda centrum`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Lite sliten`,
+    bild: `https://drive.google.com/open?id=1RumOCTFLJZT_4SzSy_4kCvz_4661dpFw`
+  },
+  {
+    position: { lat: 59.244696, lng: 17.822217 },
+    adress: `Folkets Hus Hallunda`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Fin skylt, inga skador`,
+    bild: `https://drive.google.com/open?id=1BEcxxLRPQm7df3Au55-PjXu1ugUpm3D_`
+  },
+  {
+    position: { lat: 59.206196, lng: 17.90277 },
+    adress: `Tullinge bibliotek `,
+    namn: `Elina inez maria`,
+    område: `Tullinge`,
+    kommentar: `Bra skick`,
+    bild: `https://drive.google.com/open?id=1Jh-03XSPFg7uza7BlLMlFOzsOIIwgY5E`
+  },
+  {
+    position: { lat: 59.247264, lng: 17.815517 },
+    adress: `Förskolan vallom, hallunda`,
+    namn: `Jesse, albin, leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Fint skick`,
+    bild: `https://drive.google.com/open?id=1ujs7OF9wm0gmkpxV86tnLC4TgzHvdyDF`
+  },
+  {
+    position: { lat: 59.205393, lng: 17.902905 },
+    adress: `Huddingevägen 429`,
+    namn: `Elina inez maria`,
+    område: `Tullinge`,
+    kommentar: `En del av bilden på papperskorgen är avriven`,
+    bild: `https://drive.google.com/open?id=1r8dRYpv4HqOMw3TQT09ItBQA_jd2qmTM`
+  },
+  {
+    position: { lat: 59.24745, lng: 17.825964 },
+    adress: `Rågvägen, Hallunda`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Okej skick, en del smuts och en spricka mitt i`,
+    bild: `https://drive.google.com/open?id=1RqQFETZkr379Dhu6q-VBoNxUskNUdCyR`
+  },
+  {
+    position: { lat: 59.203989, lng: 17.907336 },
+    adress: `Bansplättparken`,
+    namn: `Elina inez maria`,
+    område: `Tullinge`,
+    kommentar: `En av skyltarna ha rökte klotter annars är båda fina och i bra skick.`,
+    bild: `https://drive.google.com/open?id=16Cs2MqL9sO1QEKPL4txcSfX62Mnk1vkE, https://drive.google.com/open?id=1qsSK9Xyfm2yXuEgDmVihNAxCuB_sWd59`
+  },
+  {
+    position: { lat: 59.246955, lng: 17.831703 },
+    adress: `Förskolan esikoulu`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick, inga skador eller repor`,
+    bild: `https://drive.google.com/open?id=1mijFK4cWx2PXPr0nNaMOcfmLoN-H7wC5`
+  },
+  {
+    position: { lat: 59.164633, lng: 17.794972 },
+    adress: `Sanda gården `,
+    namn: `Elina inez maria`,
+    område: `Vårsta-Grödinge`,
+    kommentar: `Bra skick`,
+    bild: `https://drive.google.com/open?id=1OGXK4iW3yXIT5b18ZEoLBUFosLXROKNt`
+  },
+  {
+    position: { lat: 59.244295, lng: 17.814462 },
+    adress: `Norsborgs centrum`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Klotter, klistermärken, behöver tas bort ASAP`,
+    bild: `https://drive.google.com/open?id=1117jpdC2HEenD0PojWJyH8-zSdObBNhw`
+  },
+  {
+    position: { lat: 59.244882, lng: 17.808278 },
+    adress: `Kärsby sporthall`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Inga skador, bra skick`,
+    bild: `https://drive.google.com/open?id=1Za7Mc7xvxLpzdwmmZJDcsl1mzuFL26GX`
+  },
+  {
+    position: { lat: 59.244932, lng: 17.808239 },
+    adress: `Kärsbyhallen`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick förutom lite smuts`,
+    bild: `https://drive.google.com/open?id=16iK8S90JmdX9Uu6HqKsqHzqxBqQosfS-`
+  },
+  {
+    position: { lat: 59.244832, lng: 17.808872 },
+    adress: `Kärsby`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick men har blivit ganska solblekt`,
+    bild: `https://drive.google.com/open?id=1oIFOAoAEsqXK8VgNRrBSyESNgg8Rqq3t`
+  },
+  {
+    position: { lat: 59.244612, lng: 17.811178 },
+    adress: `Musikhuset norsborg`,
+    namn: `Jesde, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick`,
+    bild: `https://drive.google.com/open?id=1s9gP4dk4ZCFsUw-tPGJC37Fu98y2ZXNP`
+  },
+  {
+    position: { lat: 59.166305, lng: 17.794435 },
+    adress: `Förskolan älvan`,
+    namn: `Elina Maria inez`,
+    område: `Vårsta-Grödinge`,
+    kommentar: `Halt okej skick`,
+    bild: `https://drive.google.com/open?id=1ttb4OOAsZPIIQIACVb1aX5kQfRjCYggU`
+  },
+  {
+    position: { lat: 59.166791, lng: 17.794957 },
+    adress: `Ringens dagverksamhet`,
+    namn: `Elina inez maria`,
+    område: `Vårsta-Grödinge`,
+    kommentar: `Bra skick`,
+    bild: `https://drive.google.com/open?id=1UUgP_oCzqN2IkU5DCdeSpY4P-8FHGzd5`
+  },
+  {
+    position: { lat: 59.173793, lng: 17.793143 },
+    adress: `Brotorpsbadet`,
+    namn: `Elina inez maria`,
+    område: `Vårsta-Grödinge`,
+    kommentar: `Lite smutsig`,
+    bild: `https://drive.google.com/open?id=1GPmuz6wVQy68oSwryYOpe-p-6fRb4ypp`
+  },
+  {
+    position: { lat: 59.25076, lng: 17.813364 },
+    adress: `Tomtbergavägen 323`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Mycket fint skick`,
+    bild: `https://drive.google.com/open?id=1WfFZ-kjXGRlFk6d7WCeCtGOKMNBTrwVV`
+  },
+  {
+    position: { lat: 59.249173, lng: 17.812563 },
+    adress: `Tornet`,
+    namn: `Jesse,Albin,Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick, inga skador`,
+    bild: `https://drive.google.com/open?id=1mNexZDr0IALpgfuDWfc6Vu3nTGpXojTc, https://drive.google.com/open?id=1aO8W9iYWhNgiI8OTClIYla65fQh1NxF6`
+  },
+  {
+    position: { lat: 59.244572, lng: 17.815362 },
+    adress: `Hundhamravägen 7`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Mycket fint skick`,
+    bild: `https://drive.google.com/open?id=1AcTt0AQNO1pS8AagHoxhfbbQXg-6VDx6`
+  },
+  {
+    position: { lat: 59.256803, lng: 17.869648 },
+    adress: `Fågelviksvägen 24, Färjan`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Fittja`,
+    kommentar: `Dåligt skick, smutsig, behöver tvättas eller bytas om`,
+    bild: `https://drive.google.com/open?id=1AmBktV6diL2IQ0BG1GW5bmLVoYZfTTiT`
+  },
+  {
+    position: { lat: 59.258003, lng: 17.853927 },
+    adress: `Slagsta sjökrog`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Lite sämre skick, sliten och har ett klistermärke på sig`,
+    bild: `https://drive.google.com/open?id=1-vGwdVeXudcjtf-ah5QXIklp0LVVePL-`
+  },
+  {
+    position: { lat: 59.258063, lng: 17.853975 },
+    adress: `Slagsta sjökrog`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Ok skick, behöver tvättas.`,
+    bild: `https://drive.google.com/open?id=1nvSC3MG2zoNIZngLCPQBQqUUVZzvXEbH`
+  },
+  {
+    position: { lat: 59.257601, lng: 17.851911 },
+    adress: `Slagstabadet`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Sliten, jätte mycket klotter. Behöver tas bort`,
+    bild: `https://drive.google.com/open?id=1dPZvsbSkts8JfEEWxuLzCmoMlsIGdbbA, https://drive.google.com/open?id=1CC1iybRdVHe14z5dIopW9rWrdkWO0jpX`
+  },
+  {
+    position: { lat: 59.258251, lng: 17.849 },
+    adress: `Slagstabadet`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick, inga skador eller repor `,
+    bild: `https://drive.google.com/open?id=1K_wxa0UQx5Umegtoht8It_MUc7jG4IQ_`
+  },
+  {
+    position: { lat: 59.258275, lng: 17.848866 },
+    adress: `Slagstabadet`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Fint skick förutom lite klotter, är också ganska smutsig`,
+    bild: `https://drive.google.com/open?id=124iyEvvC1m0mSYfnUaA4gHSR9epU9wkH`
+  },
+  {
+    position: { lat: 59.258406, lng: 17.848867 },
+    adress: `Slagstabadet`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Bra skick, inga skador eller repor.`,
+    bild: `https://drive.google.com/open?id=1IbVN-BC7j1zb9nZEdJa33iGtfe7YS9i7`
+  },
+  {
+    position: { lat: 59.258363, lng: 17.846076 },
+    adress: `Slagstabadet`,
+    namn: `Leo, Albin, Jesse`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Skylten är både sliten och smtsig`,
+    bild: `https://drive.google.com/open?id=1gAuIfag04xaBOhM6MpKdPPialiDt43hs`
+  },
+  {
+    position: { lat: 59.198451, lng: 17.861978 },
+    adress: `Skyttebrinksvägen `,
+    namn: `Yasin`,
+    område: `Tullinge`,
+    kommentar: `Helt ok skylt, ser ut att vara från den gamla profilen. Rätt mycket kuskar som täcker skylten, så man ser knappt den `,
+    bild: `https://drive.google.com/open?id=1gTzRDbTc6YQ-DutcrbSzSrsLgu1dE4Rj, https://drive.google.com/open?id=1iaQXblOzWMgT2Ytj7ij-jyv5XtwF_ABL`
+  },
+  {
+    position: { lat: 59.244541, lng: 17.811768 },
+    adress: `Tomtvergsvägen 370 Kärsbyskolan `,
+    namn: `Yasin`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Den här skylten är mer än 17 år gammal, har en bild på mig själv där man ser den när jag var ett barn, och den bilden togs då 2008. Jätte skadad av solen, samt böjd, speciellt kommunloggan`,
+    bild: `https://drive.google.com/open?id=1Pp7fLVKn_38snQVcEKJUnDTHA4MCSjx-, https://drive.google.com/open?id=11orHAY1tmE0-If3tDLQBiWdJkhCiR_c8`
+  },
+  {
+    position: { lat: 59.192848, lng: 17.847747 },
+    adress: `Storvretsbadet`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Tumba`,
+    kommentar: `Bra skick, inga rejäla skador `,
+    bild: `https://drive.google.com/open?id=1T5Qvu29_vt6cAVf7N4Av5TbZG5tfKjV1`
+  },
+  {
+    position: { lat: 59.19281, lng: 17.847158 },
+    adress: `Storvretsbadet`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Tumba`,
+    kommentar: `Bra skick, inga konstigheter.`,
+    bild: `https://drive.google.com/open?id=1iAi3yt8dxUphhWOO6TyLT-TEt9ztcEdJ`
+  },
+  {
+    position: { lat: 59.193033, lng: 17.903842 },
+    adress: `Brantbrinks ip`,
+    namn: `Elina Leo inez`,
+    område: `Tullinge`,
+    kommentar: `Klistermärken och rivnärken`,
+    bild: `https://drive.google.com/open?id=1bNy8GS8R1v4sbvElAuHLDkVcfN9hY4O4`
+  },
+  {
+    position: { lat: 59.19346, lng: 17.904067 },
+    adress: `Brantbrinks IP`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Okej skick på skälva skylten men på ena sidan finns ett klistermärke och på andra massa klotter`,
+    bild: `https://drive.google.com/open?id=1hCeEfQtP4ZdpvVL-omjg9MsNsVMUa28B, https://drive.google.com/open?id=1w2tVlST0MBMKC4DVrey4C9PztxjvDaXs`
+  },
+  {
+    position: { lat: 59.192807, lng: 17.905112 },
+    adress: `Brantbrinks idrottsplats`,
+    namn: `Elina inez leo`,
+    område: `Tullinge`,
+    kommentar: `Ett gammalt klistermärken och lite klotter`,
+    bild: `https://drive.google.com/open?id=17zPXZO07fCna-0KZV2e8tkZhj6qaK5F_`
+  },
+  {
+    position: { lat: 59.192695, lng: 17.905344 },
+    adress: `Brantbrinks IP`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Mycket fint skick`,
+    bild: `https://drive.google.com/open?id=15rOIKWkjextReHxpWEN-iXeLvNNz71Q4`
+  },
+  {
+    position: { lat: 59.192695, lng: 17.905344 },
+    adress: `Brantbrinks IP`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Fint skick`,
+    bild: `https://drive.google.com/open?id=1oTRmzRpN3gvInGTuShdagQehMwas7L99`
+  },
+  {
+    position: { lat: 59.192695, lng: 17.905344 },
+    adress: `Brantbrinks IP`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Fint skick`,
+    bild: `https://drive.google.com/open?id=1vtNEyaJs7MpJ6Y6yQmKjObclw_n_ngkP`
+  },
+  {
+    position: { lat: 59.192608, lng: 17.905077 },
+    adress: `Fotiljevägen 40`,
+    namn: `Elina Leo Inez`,
+    område: `Tullinge`,
+    kommentar: `Bra sckik`,
+    bild: `https://drive.google.com/open?id=1-3wkmhz7o8CoUr6_1daoGK563DG_qTct`
+  },
+  {
+    position: { lat: 59.191662, lng: 17.844376 },
+    adress: `Storvretenssporthall`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Tumba`,
+    kommentar: `Dåligt skick, solskadad, behöver bytas om ASAP`,
+    bild: `https://drive.google.com/open?id=1D2I1DEGIpuJnHVYzpZmx5g4isOkJxc0k, https://drive.google.com/open?id=1rmkiHY72yIX2ni2ewLemV8ci8jyQYkAr`
+  },
+  {
+    position: { lat: 59.192324, lng: 17.904249 },
+    adress: `Brantbrinks IP`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Mycket fint skick`,
+    bild: `https://drive.google.com/open?id=1Pq4MWoUoYObAGPNAKGZqJJSQZG1SIOQN`
+  },
+  {
+    position: { lat: 59.192335, lng: 17.90367 },
+    adress: `TTP FK klubbstuga `,
+    namn: `Elina Leo Inez`,
+    område: `Tullinge`,
+    kommentar: `Bra skick`,
+    bild: `https://drive.google.com/open?id=1OWvzcyAC6GHX1FfQsqU5wXplpNbXDY2_`
+  },
+  {
+    position: { lat: 59.192123, lng: 17.90359 },
+    adress: `Brantbrinks IP`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Mycket fint skick`,
+    bild: `https://drive.google.com/open?id=1bcXtMSelF9T1oLao1fg3_AJThrjy403W`
+  },
+  {
+    position: { lat: 59.193364, lng: 17.902888 },
+    adress: `Brantbrinks ip`,
+    namn: `Elina Leo inez`,
+    område: `Tullinge`,
+    kommentar: `Bra sckik `,
+    bild: `https://drive.google.com/open?id=16OSq5BFxMk8B5vb390BkM2XcvgCwuPK3`
+  },
+  {
+    position: { lat: 59.192034, lng: 17.903588 },
+    adress: `Brantbrinks IP`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Mycket fint skick`,
+    bild: `https://drive.google.com/open?id=1liLK40m7OG_2l1Cj7kp4fennEl5pv6Uh`
+  },
+  {
+    position: { lat: 59.185706, lng: 17.910233 },
+    adress: `Rikstenshallen`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Ganska sliten och mycket smutsig`,
+    bild: `https://drive.google.com/open?id=129yyFb8doGfPhgsB8Ric2FWgZ7lUf7DG`
+  },
+  {
+    position: { lat: 59.183931, lng: 17.913058 },
+    adress: `Lekplatsen skolparken`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Okej skick men väldigt smutsig`,
+    bild: `https://drive.google.com/open?id=1swK3CFmbHlByyCNyCHdiUDik5kPTT38X`
+  },
+  {
+    position: { lat: 59.184056, lng: 17.913243 },
+    adress: `Lekplatsen skolparken`,
+    namn: `Elina Leo inez`,
+    område: `Tullinge`,
+    kommentar: `Bra skick `,
+    bild: `https://drive.google.com/open?id=11AwoxkCxyN5Pnm91dDUGnk19rpYlbINa, https://drive.google.com/open?id=1u8AHK31hSRn3BzXKy4s3-52sbfOr8RJl`
+  },
+  {
+    position: { lat: 59.191735, lng: 17.830752 },
+    adress: `Däldvägen 20`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Tumba`,
+    kommentar: `Bra skick, inga rejäla skador, lite smuts som behövs ta bort`,
+    bild: `https://drive.google.com/open?id=1VKnMR0GZPy2zN7cavOMlzwryWz8FZtWY, https://drive.google.com/open?id=1lm0qOF384BclOLLxOxmIlPV3PhLqoS7h`
+  },
+  {
+    position: { lat: 59.1871, lng: 17.913456 },
+    adress: `Riksteatern skola kompassen`,
+    namn: `Elina Inez leo`,
+    område: `Tullinge`,
+    kommentar: `Den är fin`,
+    bild: `https://drive.google.com/open?id=1-958MR4vBH4AclptMkp5T9dU4VjX80pr`
+  },
+  {
+    position: { lat: 59.18677, lng: 17.916356 },
+    adress: `Lilla parken`,
+    namn: `Elina Leo inez`,
+    område: `Tullinge`,
+    kommentar: `Små delar av bilden är avdragen`,
+    bild: `https://drive.google.com/open?id=1N_RiegiNTY4qwiRui52BO8ZY7p6vUzs3`
+  },
+  {
+    position: { lat: 59.186812, lng: 17.915861 },
+    adress: `Lekplatsen Riskten Lilla Parken `,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Fint skick`,
+    bild: `https://drive.google.com/open?id=1JA7cP5g4Wunk6OxWnRglUBGFO61mLthP`
+  },
+  {
+    position: { lat: 59.196837, lng: 17.843362 },
+    adress: `Förskolan Ametisten`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Tumba`,
+    kommentar: `9, bra skick, inga skador`,
+    bild: `https://drive.google.com/open?id=1E56yuLGsFMtx6QugmInAncWUO357RkNb`
+  },
+  {
+    position: { lat: 59.18677, lng: 17.916356 },
+    adress: `Lekplatsen Einstein lilla parken`,
+    namn: `Elina inez leo`,
+    område: `Tullinge`,
+    kommentar: `Bra skick `,
+    bild: `https://drive.google.com/open?id=14_J6sAD5ndzxfATcin_C2nvMPQPXm2ti`
+  },
+  {
+    position: { lat: 59.183466, lng: 17.921767 },
+    adress: `Lekplatsen Vega`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Fint skick`,
+    bild: `https://drive.google.com/open?id=1p8rpHggVR8ervY9OZV-RgXXVIt6bd8fv`
+  },
+  {
+    position: { lat: 59.16294, lng: 17.880317 },
+    adress: `Lida`,
+    namn: `Elina Leo inez`,
+    område: `Tullinge`,
+    kommentar: `Ny skylt`,
+    bild: `https://drive.google.com/open?id=1IdqLvB3UfkC6W9vb6qRaY4hgLNvYYqq9`
+  },
+  {
+    position: { lat: 59.174676, lng: 17.929143 },
+    adress: `Botkyrka skyttecenter`,
+    namn: `Leo, Elina, Inez`,
+    område: `Tullinge`,
+    kommentar: `Ena sidan ser okej ut andra är riktigt smutsig`,
+    bild: `https://drive.google.com/open?id=1H3puigm1Mn-PnRtVZuXTkxGZ3jUrE4P0, https://drive.google.com/open?id=1Et6k3sERWFw59b_SS83iMBaxGSZ5fyS2`
+  },
+  {
+    position: { lat: 59.18719, lng: 17.821932 },
+    adress: `Kassmyra`,
+    namn: `Jesse, Albin, Leo`,
+    område: `Tumba`,
+    kommentar: `Smutsig, behöver tvättas`,
+    bild: `https://drive.google.com/open?id=1FaYIRM8Ab6VDij2Hk_P-yFQ-hA8J1tDT`
+  },
+  {
+    position: { lat: 59.246357, lng: 17.815238 },
+    adress: `Nära vallmon 1`,
+    namn: `Elina Leo inez`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Klottrad och har klistermärken `,
+    bild: `https://drive.google.com/open?id=1i_h3WK5ZU0IRCgPUFdUqoCWef6OACXos, https://drive.google.com/open?id=1seEjABNEHEMftgEE9uD7BxEgG6INoS8b`
+  },
+  {
+    position: { lat: 59.241622, lng: 17.809424 },
+    adress: `Hammerstaskolan `,
+    namn: `Elina inez leo`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Lustig skylt har intet koppling till botkyrka `,
+    bild: `https://drive.google.com/open?id=135bfqkwf4honP3UTgNBtVynRG9U3EeSq`
+  },
+  {
+    position: { lat: 59.241811, lng: 17.809849 },
+    adress: `Hammerstaskolan`,
+    namn: `Leo, Elina  Inez`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Fint skick inga problem`,
+    bild: `https://drive.google.com/open?id=1JsFpt0S1rTsVlFTmyrAYfPfFUO0YGf5G`
+  },
+  {
+    position: { lat: 59.242363, lng: 17.805768 },
+    adress: `Förksolan Aspen`,
+    namn: `Leo, Elina, Inez`,
+    område: `Hallunda-Norsborg`,
+    kommentar: `Fint skick`,
+    bild: `https://drive.google.com/open?id=1tBP0Y4DdffYHi7rr4K-DLy1a1n-5LwPI`
+  },
+  {
+    position: { lat: 59.238658, lng: 17.847137 },
+    adress: `Albys hjärta`,
+    namn: `Elina inez leo`,
+    område: `Alby`,
+    kommentar: `Färgen har gått sönder och den är väldigt sliten`,
+    bild: `https://drive.google.com/open?id=17qXa_D_kaVuBkc4gICmRAf0nEv6j3l7t`
+  },
+
+];
+
+function initMap() {
+  const icon = {
+  url: "https://www.dropbox.com/scl/fi/rowql2eoyeaszdd2xpepg/ninaikon.svg?rlkey=n4mh48gw4hr7d7ls0lbokhdgy&raw=1",
+  scaledSize: new google.maps.Size(70, 70) // justera vid behov
+};
+
+
+map = new google.maps.Map(document.getElementById("map"), {
+  center: { lat: 59.24, lng: 17.85 },
+  zoom: 13,
+  mapTypeId: "roadmap",
+  gestureHandling: "greedy",
+  mapId: "270b540d454b915f9c675dd7"
+});
+
+
+
+  function PopupOverlay(position, content) {
+    this.position = position;
+    this.container = content;
+  }
+  PopupOverlay.prototype = new google.maps.OverlayView();
+  PopupOverlay.prototype.onAdd = function () {
+    const panes = this.getPanes();
+    panes.floatPane.appendChild(this.container);
+  };
+  PopupOverlay.prototype.draw = function () {
+    const projection = this.getProjection();
+    const point = projection.fromLatLngToDivPixel(this.position);
+    if (point) {
+      this.container.style.left = point.x + 'px';
+      this.container.style.top = point.y + 'px';
+    }
+  };
+  PopupOverlay.prototype.onRemove = function () {
+    if (this.container.parentNode) {
+      this.container.parentNode.removeChild(this.container);
+    }
+  };
+
+  map.addListener("click", () => {
+    if (popupOverlay) {
+      popupOverlay.setMap(null);
+      popupOverlay = null;
+    }
+  });
+
+  locations.forEach((loc) => {
+  const marker = new google.maps.Marker({
+  position: loc.position,
+  map,
+  title: loc.adress,
+  icon: icon // ← din ikon används här
+});
+
+
+    const popup = document.createElement("div");
+    popup.className = "custom-popup";
+    popup.innerHTML = `
+      <div class="popup-banner">${loc.adress}</div>
+      <div class="popup-content">
+        <strong>Namn:</strong> ${loc.namn}<br>
+        <strong>Område:</strong> ${loc.område}<br>
+        <strong>Kommentar:</strong> ${loc.kommentar}<br>
+        <strong>Bild:</strong> <a href="${loc.bild}" target="_blank">Se bild</a>
+      </div>
+    `;
+
+    marker.addListener("click", () => {
+      if (popupOverlay) popupOverlay.setMap(null);
+      popupOverlay = new PopupOverlay(loc.position, popup);
+      popupOverlay.setMap(map);
+    });
+  });
+}
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC5C1sVOfJPOUIkXIxhfD7fDvxrD8fjtPw&callback=initMap"></script>
+</body>
+</html>
